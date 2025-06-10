@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <!-- Appender per la console -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+
+        <!-- Appender per scrivere su un file generico -->
+        <File name="FileAppender" fileName="logs/app.log">
+            <PatternLayout>
+                <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>
+            </PatternLayout>
+        </File>
+
+        <!-- Appender specifico per una classe/pacchetto, come da tua richiesta -->
+        <File name="LogCallExampleLog" fileName="logs/log-call-example.log">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %m%n</Pattern>
+            </PatternLayout>
+        </File>
+    </Appenders>
+    <Loggers>
+        <!-- Logger specifico per la classe BusinessService. -->
+        <!-- Invia i log a livello TRACE o superiore al file 'business-service.log' -->
+        <!-- additivity="false" impedisce che i log vengano inviati anche al Root logger -->
+        <Logger name="net.gnius.examples.LogCallExample" level="trace" additivity="false">
+<!--            <AppenderRef ref="LogCallExample"/>-->
+            <AppenderRef ref="Console"/> <!-- Puoi inviare a più appender -->
+        </Logger>
+
+        <!-- Logger di default per tutte le altre classi -->
+        <Root level="info">
+<!--            <AppenderRef ref="FileAppender"/>-->
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>
