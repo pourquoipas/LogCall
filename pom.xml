@@ -126,9 +126,9 @@
                         -Dorg.aspectj.weaver.loadtime.ignoreErrors=true
                         -Dorg.aspectj.weaver.loadtime.configuration=META-INF/aop.xml
                         -Dorg.aspectj.weaver.loadtime.classloader=org.aspectj.weaver.loadtime.AppClassLoader
-                        --add-opens java.base/java.lang=ALL-UNNAMED
                         -Daj.weaving.verbose=true
                     </argLine>
+<!--                    &#45;&#45;add-opens java.base/java.lang=ALL-UNNAMED-->
                     <excludes>
                         <exclude>**/*IT.java</exclude>
                     </excludes>
