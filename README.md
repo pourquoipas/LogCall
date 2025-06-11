@@ -1,8 +1,3 @@
-### 2. File README.md per GitHub
-
-Questo è un file `README.md` professionale e ben strutturato che puoi usare come pagina principale del tuo progetto su GitHub.
-
-
 # @LogCall - Logging AOP per Java
 
 `@LogCall` è una libreria Java che fornisce un'annotazione per aggiungere logging dichiarativo ai tuoi metodi con zero codice boilerplate. Sfruttando la potenza di **AspectJ** e **SLF4J**, puoi loggare chiamate a metodi, parametri, valori di ritorno, eccezioni e tempi di esecuzione semplicemente aggiungendo l'annotazione `@LogCall`.
