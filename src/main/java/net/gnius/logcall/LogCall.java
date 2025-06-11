@@ -1,3 +1,13 @@
+/*
+ * Copyright (c) 2025 Gianluca Terenziani
+ *
+ * Questo file è parte di LogCall.
+ * SafeJson è distribuito sotto i termini della licenza
+ * Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International.
+ *
+ * Dovresti aver ricevuto una copia della licenza insieme a questo progetto.
+ * In caso contrario, la puoi trovare su: http://creativecommons.org/licenses/by-nc-sa/4.0/
+ */
 package net.gnius.logcall;
 
 import java.lang.annotation.ElementType;
@@ -18,7 +28,7 @@ public @interface LogCall {
      * Default: TRACE, il più basso.
      * @return Il livello di log.
      */
-    LogLevel level() default LogLevel.TRACE;
+    LogLevel level() default LogLevel.WARN;
 
     /**
      * Definisce se loggare i parametri di input del metodo.

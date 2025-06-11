@@ -1,0 +1,8 @@
+<aspectj>
+    <weaver>
+        <include within="net.gnius.logcall..*" />
+    </weaver>
+    <aspects>
+        <aspect name="net.gnius.logcall.LogCallAspect" />
+    </aspects>
+</aspectj>

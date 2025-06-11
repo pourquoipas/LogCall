@@ -15,7 +15,21 @@
         <maven-surefire-plugin.version>3.3.0</maven-surefire-plugin.version>
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <aspectj.version>1.9.7</aspectj.version>
+        <junit.jupiter.version>5.10.2</junit.jupiter.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.jupiter.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
 
     <dependencies>
         <!-- SLF4J API: La nostra libreria dipende solo dall'astrazione -->
@@ -49,18 +63,32 @@
             <artifactId>aspectjrt</artifactId>
             <version>${aspectj.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>${aspectj.version}</version>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.10.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.10.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -92,6 +120,25 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
+                <configuration>
+                    <argLine>
+                        -javaagent:${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar
+                        -Dorg.aspectj.weaver.loadtime.ignoreErrors=true
+                        -Dorg.aspectj.weaver.loadtime.configuration=META-INF/aop.xml
+                        -Dorg.aspectj.weaver.loadtime.classloader=org.aspectj.weaver.loadtime.AppClassLoader
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        -Daj.weaving.verbose=true
+                    </argLine>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
+                    <properties>
+                        <configurationParameters>
+                            junit.platform.output.capture.stdout=true
+                            junit.platform.output.capture.stderr=true
+                        </configurationParameters>
+                    </properties>
+                </configuration>
             </plugin>
 
             <!-- 3. PLUGIN ASPECTJ: Questo è il componente chiave -->
@@ -106,21 +153,31 @@
                     <target>1.8</target>
                     <!-- Dice ad AspectJ di usare gli aspect definiti nella nostra libreria -->
                     <!--
-                   <aspectLibraries>
+                    <aspectLibraries>
                         <aspectLibrary>
-                            <groupId>net.gnìus</groupId>
-                            <artifactId>logcall</artifactId>
+                            <groupId>${project.groupId}</groupId>
+                            <artifactId>${project.artifactId}</artifactId>
                         </aspectLibrary>
-                   </aspectLibraries>
+                    </aspectLibraries>
  -->
+                    <showWeaveInfo>true</showWeaveInfo>
+                    <Xlint>ignore</Xlint>
                 </configuration>
                 <executions>
                     <execution>
                         <goals>
                             <goal>compile</goal> <!-- Si lega alla fase di compilazione di Maven -->
+                            <goal>test-compile</goal>
                         </goals>
                     </execution>
                 </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjtools</artifactId>
+                        <version>${aspectj.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
 

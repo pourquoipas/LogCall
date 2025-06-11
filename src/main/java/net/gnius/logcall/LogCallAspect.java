@@ -1,5 +1,16 @@
+/*
+ * Copyright (c) 2025 Gianluca Terenziani
+ *
+ * Questo file è parte di LogCall.
+ * SafeJson è distribuito sotto i termini della licenza
+ * Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International.
+ *
+ * Dovresti aver ricevuto una copia della licenza insieme a questo progetto.
+ * In caso contrario, la puoi trovare su: http://creativecommons.org/licenses/by-nc-sa/4.0/
+ */
 package net.gnius.logcall;
 
+import org.apache.logging.log4j.LogManager;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -28,6 +39,34 @@ public class LogCallAspect {
     @Around("methodAnnotatedWithLogCall(logCall)")
     public Object logMethodCall(ProceedingJoinPoint joinPoint, LogCall logCall) throws Throwable {
         Logger logger = LoggerFactory.getLogger(joinPoint.getSignature().getDeclaringType());
+
+/*
+        // Enhanced debug information
+        System.out.println(">>>>>>>>CALLED logMethodCall: " + logger.getName() +
+                " for " + joinPoint.getSignature().getName() +
+                " | Log Level: " + logCall.level() +
+                " | Is Enabled: " + isLoggerEnabled(logger, logCall.level()));
+
+*/
+
+        // Check if the logger has a ListAppender by class name
+        // Retrieve the logger name
+        String loggerName = joinPoint.getSignature().getDeclaringTypeName();
+
+        // Get the Log4j core logger directly
+        org.apache.logging.log4j.core.Logger coreLogger =
+                (org.apache.logging.log4j.core.Logger) LogManager.getLogger(loggerName);
+
+        // Check if the logger has a ListAppender by class name
+        boolean hasListAppender = coreLogger.getAppenders().values().stream()
+                .anyMatch(appender -> appender.getClass().getSimpleName().equals("ListAppender"));
+
+/*
+        System.out.println("Logger: " + coreLogger.getName() +
+                " | Has ListAppender: " + hasListAppender +
+                " | Appenders: " + coreLogger.getAppenders().keySet());
+*/
+
 
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
@@ -88,7 +127,17 @@ public class LogCallAspect {
             }
         }
     }
-
+    // Helper method to check if the logger is enabled for the specified level
+    private boolean isLoggerEnabled(Logger logger, LogLevel level) {
+        switch (level) {
+            case DEBUG: return logger.isDebugEnabled();
+            case INFO: return logger.isInfoEnabled();
+            case WARN: return logger.isWarnEnabled();
+            case ERROR: return logger.isErrorEnabled();
+            case TRACE: return logger.isTraceEnabled();
+            default: return false;
+        }
+    }
     /**
      * Pulisce uno stack trace rimuovendo le righe relative all'aspect di logging.
      * @param fullStackTrace Lo stack trace completo come stringa.

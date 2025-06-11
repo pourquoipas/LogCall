@@ -1,3 +1,13 @@
+/*
+ * Copyright (c) 2025 Gianluca Terenziani
+ *
+ * Questo file è parte di LogCall.
+ * SafeJson è distribuito sotto i termini della licenza
+ * Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International.
+ *
+ * Dovresti aver ricevuto una copia della licenza insieme a questo progetto.
+ * In caso contrario, la puoi trovare su: http://creativecommons.org/licenses/by-nc-sa/4.0/
+ */
 package net.gnius.examples;
 
 import net.gnius.logcall.LogCall;
@@ -40,6 +50,8 @@ public class LogCallExample {
             service.processData("Test2", -5);
         } catch (Exception e) {
             // L'eccezione verrà loggata automaticamente dall'aspect
+            System.out.println(">>>> Eccezione comunque rilanciata: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
