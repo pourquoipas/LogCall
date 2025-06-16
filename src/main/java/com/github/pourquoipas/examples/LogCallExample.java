@@ -8,10 +8,10 @@
  * Dovresti aver ricevuto una copia della licenza insieme a questo progetto.
  * In caso contrario, la puoi trovare su: http://creativecommons.org/licenses/by-nc-sa/4.0/
  */
-package net.gnius.examples;
+package com.github.pourquoipas.examples;
 
-import net.gnius.logcall.LogCall;
-import net.gnius.logcall.LogLevel;
+import com.github.pourquoipas.logcall.LogCall;
+import com.github.pourquoipas.logcall.LogLevel;
 
 import java.math.BigDecimal;
 

@@ -4,19 +4,20 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>net.gnius</groupId>
+    <groupId>com.github.pourquoipas</groupId>
     <artifactId>logcall</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <name>LogCall Proxy Library</name>
+    <description>A zero-config logging library using compile-time instrumentation with Byte Buddy.</description>
+
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
-        <maven-surefire-plugin.version>3.3.0</maven-surefire-plugin.version>
-        <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
-        <aspectj.version>1.9.7</aspectj.version>
+        <slf4j.version>2.0.12</slf4j.version>
+        <byte-buddy.version>1.14.12</byte-buddy.version>
         <junit.jupiter.version>5.10.2</junit.jupiter.version>
-    </properties>
+        <log4j.version>2.23.1</log4j.version> <exec.plugin.version>3.1.0</exec.plugin.version> <compiler.plugin.version>3.8.1</compiler.plugin.version> <surefire.plugin.version>3.2.5</surefire.plugin.version> </properties>
 
     <dependencyManagement>
         <dependencies>
@@ -27,48 +28,50 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>${byte-buddy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>${byte-buddy.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
 
     <dependencies>
-        <!-- SLF4J API: La nostra libreria dipende solo dall'astrazione -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.17</version>
-        </dependency>
-
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.23.1</version> </dependency>
+            <version>${log4j.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>compile</scope> </dependency>
+
 
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.23.1</version>
-        </dependency>
-
+            <version>${log4j.version}</version>
+            <scope>runtime</scope> </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j2-impl</artifactId>
-            <version>2.23.1</version>
-        </dependency>
+            <version>${log4j.version}</version>
+            <scope>runtime</scope> </dependency>
 
-
-        <!-- AspectJ Runtime: Necessario per le classi di supporto di AspectJ -->
-        <dependency>
-            <groupId>org.aspectj</groupId>
-            <artifactId>aspectjrt</artifactId>
-            <version>${aspectj.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.aspectj</groupId>
-            <artifactId>aspectjweaver</artifactId>
-            <version>${aspectj.version}</version>
-            <scope>test</scope>
-        </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -98,94 +101,87 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler-plugin.version}</version>
+                <version>${compiler.plugin.version}</version>
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
 
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>${maven-jar-plugin.version}</version>
-                <configuration>
-                    <excludes>
-                        <exclude>net/gnius/examples/**</exclude>
-                    </excludes>
-                </configuration>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>${exec.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>weave-classes</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.github.pourquoipas.logcall.LogCallClassWeaver</mainClass>
+                            <arguments>
+                                <argument>${project.build.outputDirectory}</argument>
+                            </arguments>
+                            <classpathScope>compile</classpathScope>
+                            <includePluginDependencies>true</includePluginDependencies>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>weave-test-classes</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.github.pourquoipas.logcall.LogCallClassWeaver</mainClass>
+                            <arguments>
+                                <argument>${project.build.testOutputDirectory}</argument>
+                            </arguments>
+                            <classpathScope>test</classpathScope>
+                            <includePluginDependencies>true</includePluginDependencies>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>net.bytebuddy</groupId>
+                        <artifactId>byte-buddy</artifactId>
+                        <version>${byte-buddy.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>${project.groupId}</groupId>
+                        <artifactId>${project.artifactId}</artifactId>
+                        <version>${project.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.logging.log4j</groupId>
+                        <artifactId>log4j-api</artifactId>
+                        <version>${log4j.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.logging.log4j</groupId>
+                        <artifactId>log4j-core</artifactId>
+                        <version>${log4j.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven-surefire-plugin.version}</version>
+                <version>${surefire.plugin.version}</version>
                 <configuration>
-                    <argLine>
-                        -javaagent:${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar
-                        -Dorg.aspectj.weaver.loadtime.ignoreErrors=true
-                        -Dorg.aspectj.weaver.loadtime.configuration=META-INF/aop.xml
-                        -Dorg.aspectj.weaver.loadtime.classloader=org.aspectj.weaver.loadtime.AppClassLoader
-                        -Daj.weaving.verbose=true
-                    </argLine>
-<!--                    &#45;&#45;add-opens java.base/java.lang=ALL-UNNAMED-->
-                    <excludes>
-                        <exclude>**/*IT.java</exclude>
-                    </excludes>
-                    <properties>
-                        <configurationParameters>
-                            junit.platform.output.capture.stdout=true
-                            junit.platform.output.capture.stderr=true
-                        </configurationParameters>
-                    </properties>
                 </configuration>
             </plugin>
-
-            <!-- 3. PLUGIN ASPECTJ: Questo è il componente chiave -->
-            <!-- Esegue il "weaving" (iniezione del codice) dopo la compilazione -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>aspectj-maven-plugin</artifactId>
-                <version>1.14.0</version>
-                <configuration>
-                    <complianceLevel>1.8</complianceLevel>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                    <!-- Dice ad AspectJ di usare gli aspect definiti nella nostra libreria -->
-                    <!--
-                    <aspectLibraries>
-                        <aspectLibrary>
-                            <groupId>${project.groupId}</groupId>
-                            <artifactId>${project.artifactId}</artifactId>
-                        </aspectLibrary>
-                    </aspectLibraries>
- -->
-                    <showWeaveInfo>true</showWeaveInfo>
-                    <Xlint>ignore</Xlint>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>compile</goal> <!-- Si lega alla fase di compilazione di Maven -->
-                            <goal>test-compile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.aspectj</groupId>
-                        <artifactId>aspectjtools</artifactId>
-                        <version>${aspectj.version}</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-
-
-
-
 
         </plugins>
     </build>
+
     <distributionManagement>
         <repository>
             <id>github</id>

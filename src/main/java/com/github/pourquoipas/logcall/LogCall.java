@@ -8,7 +8,7 @@
  * Dovresti aver ricevuto una copia della licenza insieme a questo progetto.
  * In caso contrario, la puoi trovare su: http://creativecommons.org/licenses/by-nc-sa/4.0/
  */
-package net.gnius.logcall;
+package com.github.pourquoipas.logcall;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -22,7 +22,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface LogCall {
-
     /**
      * Specifica il livello di log da utilizzare.
      * Default: TRACE, il più basso.

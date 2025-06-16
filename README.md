@@ -103,9 +103,10 @@ Crea un file `src/main/resources/log4j2.xml` per configurare dove e come scriver
 ## Esempi di Utilizzo
 
 ### Log di Base (Parametri e Ritorno)
+
 ```java
-import net.gnius.logcall.LogCall;
-import net.gnius.logcall.LogLevel;
+import logcall.com.github.pourquoipas.LogCall;
+import logcall.com.github.pourquoipas.LogLevel;
 
 public class MyService {
     @LogCall(level = LogLevel.INFO, logParameters = true, logReturn = true)
