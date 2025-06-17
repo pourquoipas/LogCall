@@ -1,171 +1,177 @@
-# @LogCall - Logging AOP per Java
+# LogCall - Automatic Method Call Logging
 
-`@LogCall` è una libreria Java che fornisce un'annotazione per aggiungere logging dichiarativo ai tuoi metodi con zero codice boilerplate. Sfruttando la potenza di **AspectJ** e **SLF4J**, puoi loggare chiamate a metodi, parametri, valori di ritorno, eccezioni e tempi di esecuzione semplicemente aggiungendo l'annotazione `@LogCall`.
+LogCall is a lightweight Java library that provides a powerful `@LogCall` annotation to automatically log method calls, including parameters, return values, execution time, and exceptions, using compile-time bytecode weaving with ByteBuddy.
 
-## Caratteristiche Principali
+This approach means there is zero performance overhead from reflection at runtime, as the logging logic is injected directly into your class files during the build process.
 
-- **Zero Boilerplate**: Dimentica `logger.info("Entering method...")`. Aggiungi solo l'annotazione.
-- **Configurabile**: Controlla il livello di log (TRACE, DEBUG, INFO, etc.).
-- **Dettagliato**: Logga automaticamente parametri, valori di ritorno e tempi di esecuzione.
-- **Gestione Errori**: Logga automaticamente lo stack trace delle eccezioni.
-- **Flessibile**: Usa un pattern di log custom per un output personalizzato.
-- **Performante**: Utilizza il weaving a tempo di compilazione di AspectJ per un overhead minimo a runtime.
-- **Universale**: Si integra con qualsiasi framework di logging che supporti SLF4J (Log4j2, Logback, etc.).
+---
 
-## Come Funziona
+## Features
 
-Questa libreria non si basa sulla reflection a runtime. Utilizza invece l'**Aspect-Oriented Programming (AOP)** tramite AspectJ. Un plugin Maven speciale ("weaver") modifica il bytecode delle tue classi a tempo di compilazione, iniettando la logica di logging in modo trasparente attorno ai metodi annotati con `@LogCall`.
+- **Declarative Logging**: Simply add the `@LogCall` annotation to any method to enable logging.
+- **Highly Configurable**: Customize the log level, and choose whether to log parameters, return values, exceptions, and stack traces.
+- **Custom Log Messages**: Define your own log message patterns with placeholders for method details (e.g., `{methodName}`, `{params}`, `{return}`, and even parameter names like `{myParam}`).
+- **Zero Runtime Overhead**: All bytecode manipulation happens at compile time, so your production code runs at full speed.
+- **Log4j Integration**: Seamlessly integrates with Log4j 2 for robust and flexible logging.
 
-## Setup del Progetto
+---
 
-Segui questi passaggi per integrare `@LogCall` nel tuo progetto Maven.
+## License
 
-### Passaggio 1: Aggiungi la Dipendenza
+This library is licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International**.
 
-Aggiungi la dipendenza della libreria `logcall` al tuo `pom.xml`.
+For the full license text, please visit: [http://creativecommons.org/licenses/by-nc-sa/4.0/](http://creativecommons.org/licenses/by-nc-sa/4.0/)
+
+---
+
+## Installation
+
+To use LogCall in your Maven project, add the following dependency to your `pom.xml`:
 
 ```xml
 <dependency>
-    <groupId>net.gnius</groupId>
+    <groupId>com.github.pourquoipas</groupId>
     <artifactId>logcall</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version> <!-- Use the latest version -->
 </dependency>
 ```
 
-### Passaggio 2: Configura il Plugin AspectJ
+---
 
-L'iniezione del codice di logging è gestita dal `aspectj-maven-plugin`. Aggiungilo alla sezione `<build><plugins>` del tuo `pom.xml`.
+## Configuration for Compile-Time Weaving
+
+The core of LogCall is a compile-time weaver that modifies your `.class` files. You need to configure the `exec-maven-plugin` to run this weaver after your project's classes have been compiled.
+
+Add the following plugin configuration to the `<build><plugins>` section of your `pom.xml`:
 
 ```xml
 <plugin>
     <groupId>org.codehaus.mojo</groupId>
-    <artifactId>aspectj-maven-plugin</artifactId>
-    <version>1.14.0</version>
-    <configuration>
-        <complianceLevel>1.8</complianceLevel>
-        <source>1.8</source>
-        <target>1.8</target>
-        <aspectLibraries>
-            <!-- Dice ad AspectJ di cercare gli Aspect nella nostra libreria -->
-            <aspectLibrary>
-                <groupId>net.gnius</groupId>
-                <artifactId>logcall</artifactId>
-            </aspectLibrary>
-        </aspectLibraries>
-    </configuration>
+    <artifactId>exec-maven-plugin</artifactId>
+    <version>3.1.0</version>
     <executions>
         <execution>
+            <id>weave-classes</id>
+            <phase>process-classes</phase> <!-- This runs after the 'compile' phase -->
             <goals>
-                <goal>compile</goal>
+                <goal>java</goal>
             </goals>
+            <configuration>
+                <mainClass>com.github.pourquoipas.logcall.LogCallClassWeaver</mainClass>
+                <arguments>
+                    <!-- This points the weaver to your compiled classes -->
+                    <argument>${project.build.outputDirectory}</argument>
+                </arguments>
+                <!--
+                   The weaver needs its own dependencies (like ByteBuddy and Log4j)
+                   on the classpath to run correctly.
+                -->
+                <includePluginDependencies>true</includePluginDependencies>
+            </configuration>
         </execution>
     </executions>
+    <!--
+       Define the weaver and its dependencies here so the plugin can find them.
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>com.github.pourquoipas</groupId>
+            <artifactId>logcall</artifactId>
+            <version>1.0.0</version> <!-- Use the same version as your project dependency -->
+        </dependency>
+    </dependencies>
 </plugin>
 ```
-**Nota:** Se stai sviluppando la libreria e l'applicazione nello stesso progetto multimodulo, potresti non aver bisogno della sezione `<aspectLibraries>`. È fondamentale quando `logcall` è una dipendenza esterna (un file JAR).
 
-### Passaggio 3: Configura un Backend di Logging (SLF4J)
+**Important:** For logging parameter names (e.g., `{amount}`), you must configure the `maven-compiler-plugin` to include parameter name information in the bytecode.
 
-`@LogCall` usa SLF4J. Devi quindi fornire un'implementazione. L'esempio seguente usa **Log4j2**.
-
-Aggiungi le dipendenze necessarie al `pom.xml`:
 ```xml
-<!-- Binding SLF4J con Log4j2 -->
-<dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-slf4j2-impl</artifactId>
-    <version>2.23.1</version>
-</dependency>
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <version>3.8.1</version>
+    <configuration>
+        <source>1.8</source> <!-- Or your Java version -->
+        <target>1.8</target> <!-- Or your Java version -->
+        <parameters>true</parameters> <!-- This is the crucial flag -->
+    </configuration>
+</plugin>
 ```
 
-Crea un file `src/main/resources/log4j2.xml` per configurare dove e come scrivere i log:
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN">
-    <Appenders>
-        <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-        </Console>
-    </Appenders>
-    <Loggers>
-        <Root level="info">
-            <AppenderRef ref="Console"/>
-        </Root>
-        
-        <!-- Esempio: setta un livello più basso per il tuo package -->
-        <Logger name="com.myapp.package" level="trace" additivity="false">
-            <AppenderRef ref="Console"/>
-        </Logger>
-    </Loggers>
-</Configuration>
-```
+---
 
-## Esempi di Utilizzo
+## Usage
 
-### Log di Base (Parametri e Ritorno)
+Using `@LogCall` is straightforward. Simply annotate any method you wish to log. The library includes a `LogCallExample` class (which is not part of the final JAR) to demonstrate its usage.
+
+### Basic Logging
+
+Log method entry, parameters, return value, and exceptions at the INFO level.
 
 ```java
-import logcall.com.github.pourquoipas.LogCall;
-import logcall.com.github.pourquoipas.LogLevel;
+import com.github.pourquoipas.logcall.LogCall;
+import com.github.pourquoipas.logcall.LogLevel;
 
 public class MyService {
-    @LogCall(level = LogLevel.INFO, logParameters = true, logReturn = true)
-    public String process(String input) {
-        return "Processed: " + input;
-    }
-}
-```
-**Output del Log:**
-`INFO com.mycompany.MyService - Method 'process' | Params: [Hello] | Return: Processed: Hello | Duration: 2ms`
 
-### Log di Eccezioni
-```java
-public class MyService {
-    @LogCall(level = LogLevel.ERROR, logException = true)
-    public void validate(int value) {
+    @LogCall(level = LogLevel.INFO, logParameters = true, logReturn = true, logException = true)
+    public String processData(String name, int value) {
         if (value < 0) {
             throw new IllegalArgumentException("Value cannot be negative");
         }
+        return "Result for " + name + " is " + (value * 2);
     }
 }
 ```
-**Output del Log:**
-`ERROR com.mycompany.MyService - Method 'validate' | Threw Exception: IllegalArgumentException | Duration: 5ms
-Exception Stack Trace:
-java.lang.IllegalArgumentException: Value cannot be negative
-	at com.mycompany.MyService.validate(MyService.java:10)
-    ...`
 
-### Log con Pattern Custom
+### Stack Trace Logging
+
+Log the call stack trace, which is useful for debugging but can be expensive.
+
 ```java
-public class MyService {
-    @LogCall(customLog = "Calling {methodName} for user {user}. Result: {return}")
-    public String getUserData(String user) {
-        return "DataFor" + user;
+@LogCall(logStackTrace = true)
+public void anotherMethod() {
+    // ... business logic ...
+}
+```
+
+### Custom Log Messages
+
+Define a completely custom log message pattern using placeholders. You can reference parameters by name if you've enabled the `-parameters` compiler flag.
+
+```java
+import java.math.BigDecimal;
+
+public class PaymentService {
+    @LogCall(
+            level = LogLevel.WARN,
+            customLog = "Critical call to '{methodName}'. User: {user}, Amount: {amount}."
+    )
+    public void criticalOperation(BigDecimal amount, String user) {
+        // ... critical business logic ...
     }
 }
 ```
-**Output del Log:**
-`TRACE com.mycompany.MyService - Calling getUserData for user JohnDoe. Result: DataForJohnDoe`
 
-#### Placeholder per `customLog`
-| Placeholder   | Descrizione                                                     |
-|---------------|-----------------------------------------------------------------|
-| `{methodName}`| Il nome del metodo annotato.                                    |
-| `{className}` | Il nome semplice della classe.                                  |
-| `{params}`    | Una lista di tutti i parametri separati da virgola.             |
-| `{param[i]}`  | Il valore del parametro all'indice `i` (es. `{param[0]}`).      |
-| `{*nomeParam*}` | Il valore del parametro con quel nome (richiede Java 8+ e flag `-parameters`). |
-| `{return}`    | Il valore di ritorno del metodo.                                |
-| `{stacktrace}`| Lo stack trace (della chiamata o dell'eccezione se presente). |
-| `{exception}` | Lo stack trace specifico di un'eccezione (se sollevata).      |
+**Supported Placeholders for `customLog`:**
+- `{methodName}`: The name of the annotated method.
+- `{className}`: The simple name of the class.
+- `{params}`: A comma-separated list of all parameter values.
+- `{param[i]}`: The value of the parameter at index `i` (e.g., `{param[0]}`).
+- `{[paramName]}`: The value of the parameter by its name (e.g., `{user}`, `{amount}`). **Requires `-parameters` compiler flag.**
+- `{return}`: The value returned by the method.
+- `{exception}`: The stack trace of any exception thrown.
 
-### Opzioni dell'annotazione `@LogCall`
-| Attributo         | Tipo          | Descrizione                                                                      | 
-|-------------------|---------------|----------------------------------------------------------------------------------|
-| `level`           | `LogLevel`    | Il livello di log (TRACE, DEBUG, INFO, WARN, ERROR). Default: WARN.              |
-| `logParameters`   | `boolean`     | Logga i parametri del metodo. Default: false.                                    |
-| `logReturn`       | `boolean`     | Logga il valore di ritorno del metodo. Default: false.                           |
-| `logException`    | `boolean`     | Logga le eccezioni lanciate dal metodo. Default: false.                          |
-| `customLog`       | `String`      | Un pattern di log personalizzato. Usa i placeholder per formattare il messaggio. |
-| `logStacktrace` | `boolean`     | Logga lo stack trace della chiamata o dell'eccezione. Default: false.            |
+---
+
+## How It Works
+
+This library uses **ByteBuddy**, a powerful code generation and manipulation library.
+
+1.  Your Java code is compiled into `.class` files by the `maven-compiler-plugin`.
+2.  The `exec-maven-plugin` then runs `LogCallClassWeaver`.
+3.  The weaver scans your compiled classes for the `@LogCall` annotation.
+4.  For each annotated method, it uses ByteBuddy's `Advice` API to inject the logging logic from `LogCallAdvice` directly into the method's bytecode.
+5.  It also adds a private `@AlreadyWoven` annotation to the class to ensure it is never woven more than once.
+
+The final `.class` files in your `target/classes` directory contain the logging calls, ready to be packaged into a JAR.

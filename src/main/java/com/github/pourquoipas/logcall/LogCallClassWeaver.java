@@ -1,9 +1,18 @@
+/*
+ * Copyright (c) 2025 Gianluca Terenziani
+ *
+ * Questo file è parte di LogCall.
+ * LogCall è distribuito sotto i termini della licenza
+ * Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International.
+ *
+ * Dovresti aver ricevuto una copia della licenza insieme a questo progetto.
+ * In caso contrario, la puoi trovare su: http://creativecommons.org/licenses/by-nc-sa/4.0/
+ */
 package com.github.pourquoipas.logcall;
 
-import com.github.pourquoipas.logcall.LogCall;
-import com.github.pourquoipas.logcall.LogCallAdvice;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.asm.Advice;
+import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.DynamicType;
@@ -13,6 +22,10 @@ import net.bytebuddy.pool.TypePool;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -20,10 +33,19 @@ import java.util.stream.Stream;
 
 /**
  * A compile-time class weaver using ByteBuddy.
- * This version uses the robust `Advice` API and the external `LogCallAdvice`
- * to implement the full logging functionality.
+ * This version uses the robust `Advice` API and is idempotent, preventing classes
+ * from being woven more than once.
  */
 public class LogCallClassWeaver {
+
+    /**
+     * A private marker annotation to detect if a class has already been transformed.
+     * This prevents the weaver from applying advice multiple times to the same class.
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.TYPE)
+    private @interface AlreadyWoven {
+    }
 
     public static void main(String[] args) throws IOException {
         if (args.length != 1) {
@@ -39,7 +61,6 @@ public class LogCallClassWeaver {
 
         System.out.println("### ByteBuddy CTI: Starting class weaving in directory: " + classesDir.getAbsolutePath());
 
-        // Use a robust ClassFileLocator to find all necessary classes.
         ClassFileLocator classFileLocator = new ClassFileLocator.Compound(
                 new ClassFileLocator.ForFolder(classesDir),
                 ClassFileLocator.ForClassLoader.of(Thread.currentThread().getContextClassLoader()),
@@ -54,7 +75,6 @@ public class LogCallClassWeaver {
                     .filter(p -> p.toString().endsWith(".class"))
                     .forEach(classFile -> {
                         String className = getClassName(classesDir.toPath(), classFile);
-                        // Avoid transforming the weaver, the advice, or the annotation itself.
                         if (className == null || className.equals(LogCallClassWeaver.class.getName()) || className.equals(LogCallAdvice.class.getName())) {
                             return;
                         }
@@ -67,7 +87,12 @@ public class LogCallClassWeaver {
                             }
                             TypeDescription typeDescription = resolution.resolve();
 
-                            // Find methods annotated with your existing @LogCall annotation.
+                            // --- IDEMPOTENCY CHECK ---
+                            // Skip this class if it already has our marker annotation.
+                            if (ElementMatchers.isAnnotatedWith(AlreadyWoven.class).matches(typeDescription)) {
+                                return;
+                            }
+
                             boolean hasAnnotatedMethod = ElementMatchers.declaresMethod(
                                     ElementMatchers.isAnnotatedWith(LogCall.class)
                             ).matches(typeDescription);
@@ -75,10 +100,10 @@ public class LogCallClassWeaver {
                             if (hasAnnotatedMethod) {
                                 System.out.println("### ByteBuddy CTI: Found target for transformation: " + typeDescription.getName());
 
-                                // Use the .visit() method with Advice.to()
-                                // This applies the enter/exit logic from LogCallAdvice to the matched methods.
                                 DynamicType.Unloaded<?> unloaded = byteBuddy.redefine(typeDescription, classFileLocator)
                                         .visit(Advice.to(LogCallAdvice.class).on(ElementMatchers.isAnnotatedWith(LogCall.class)))
+                                        // Add the marker annotation to prevent re-weaving in the future.
+                                        .annotateType(AnnotationDescription.Builder.ofType(AlreadyWoven.class).build())
                                         .make();
 
                                 byte[] originalBytes = Files.readAllBytes(classFile);

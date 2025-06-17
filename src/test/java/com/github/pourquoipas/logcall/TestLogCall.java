@@ -2,7 +2,7 @@
  * Copyright (c) 2025 Gianluca Terenziani
  *
  * Questo file è parte di LogCall.
- * SafeJson è distribuito sotto i termini della licenza
+ * LogCall è distribuito sotto i termini della licenza
  * Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International.
  *
  * Dovresti aver ricevuto una copia della licenza insieme a questo progetto.
@@ -30,7 +30,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 
-public class TestLogCallAspect {
+public class TestLogCall {
 
     // Un appender custom per catturare i log in una lista.
     private static class ListAppender extends AbstractAppender {
@@ -259,7 +259,7 @@ public class TestLogCallAspect {
 
         assertTrue(logMessage.contains("Method 'stackTraceLog'"), "Log message should contain method name");
         assertTrue(logMessage.contains("Call Stack Trace:"), "Log message should contain 'Call Stack Trace:'");
-        assertTrue(logMessage.contains("at com.github.pourquoipas.logcall.TestLogCallAspect.testStackTraceLog"), "Log message should contain calling test method");
+        assertTrue(logMessage.contains("at com.github.pourquoipas.logcall.TestLogCall.testStackTraceLog"), "Log message should contain calling test method");
         assertFalse(logMessage.contains("com.github.pourquoipas.logcall.LogCallAspect"), "Log message should not contain AspectJ internal classes");
     }
 
