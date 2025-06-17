@@ -2,13 +2,13 @@
  * Copyright (c) 2025 Gianluca Terenziani
  *
  * Questo file è parte di LogCall.
- * SafeJson è distribuito sotto i termini della licenza
+ * LogCall è distribuito sotto i termini della licenza
  * Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International.
  *
  * Dovresti aver ricevuto una copia della licenza insieme a questo progetto.
  * In caso contrario, la puoi trovare su: http://creativecommons.org/licenses/by-nc-sa/4.0/
  */
-package net.gnius.logcall;
+package com.github.pourquoipas.logcall;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -30,7 +30,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 
-public class TestLogCallAspect {
+public class TestLogCall {
 
     // Un appender custom per catturare i log in una lista.
     private static class ListAppender extends AbstractAppender {
@@ -65,30 +65,66 @@ public class TestLogCallAspect {
     private LoggerContext ctx; // Reference to the LoggerContext
     private org.apache.logging.log4j.core.Logger testServiceLog4jLogger; // Log4j2 Logger instance
 
-    // Classe fittizia su cui testare l'annotazione
-    static class TestService {
 
-        @LogCall(level = LogLevel.INFO, logParameters = true, logReturn = true)
-        public String simpleLog(String param1, int param2) {
-            return "OK-" + param1;
-        }
+/*
+    // This static block will execute the very first time TestLogCallAspect is loaded
+    static {
+        System.out.println("### STATIC INIT: Attempting very early ByteBuddy agent installation... ###");
+        try {
+            // Install the ByteBuddyAgent into the current JVM process
+            ByteBuddyAgent.install();
 
-        @LogCall(level = LogLevel.WARN, logException = true)
-        public void exceptionLog(String input) {
-            throw new IllegalStateException("Test Exception");
-        }
-
-        @LogCall(logStackTrace = true)
-        public String stackTraceLog() {
-            // do nothing
-            return "logStackTraceLog";
-        }
-
-        @LogCall(customLog = "Custom log for {methodName} with param {p1} and return {return}")
-        public String customLog(String p1) {
-            return "CustomReturn";
+            new AgentBuilder.Default()
+                    // Keep your specific matcher. Adding nameStartsWith is a good practice.
+                    .type(ElementMatchers.nameStartsWith("com.github.pourquoipas.logcall.")
+                            .or(ElementMatchers.nameStartsWith("com.github.pourquoipas.examples."))
+                            .and(ElementMatchers.declaresMethod(ElementMatchers.isAnnotatedWith(LogCall.class)))
+                    )
+                    .transform((builder, typeDescription, classLoader, module, protectionDomain) -> {
+                        System.out.println("### LogCall Agent (Static Init): TRANSFORMING CLASS: " + typeDescription.getName());
+                        return builder
+                                .method(ElementMatchers.isAnnotatedWith(LogCall.class))
+                                .intercept(MethodDelegation.to(LogCallInterceptor.class));
+                    })
+                    .with(AgentBuilder.Listener.StreamWriting.toSystemOut()) // Still good for debug
+                    .installOnByteBuddyAgent(); // Install on the agent installed by ByteBuddyAgent.install()
+            System.out.println("### STATIC INIT: ByteBuddy agent installed successfully. ###");
+        } catch (Throwable t) {
+            System.err.println("### STATIC INIT: CRITICAL ERROR during early agent installation: " + t.getMessage());
+            t.printStackTrace(System.err);
+            // Optionally re-throw a RuntimeException to fail the test early if agent fails
+            // throw new RuntimeException("Failed to install ByteBuddy agent in static initializer", t);
         }
     }
+*/
+
+
+
+/*
+
+    // Static block or @BeforeAll for one-time agent installation
+    @BeforeAll
+    static void installByteBuddyAgent() {
+        System.out.println("### ByteBuddyAgent: Dynamically installing agent for tests... ###");
+        // Install the ByteBuddyAgent into the current JVM process
+        ByteBuddyAgent.install();
+
+        // This is where you put the *exact same* AgentBuilder logic from your YourByteBuddyAgent.premain
+        new AgentBuilder.Default()
+                .type(ElementMatchers.declaresMethod(ElementMatchers.isAnnotatedWith(LogCall.class)))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) -> {
+                    System.out.println("### LogCall Agent (Dynamic): Transforming class: " + typeDescription.getName());
+                    return builder
+                            .method(ElementMatchers.isAnnotatedWith(LogCall.class))
+                            .intercept(MethodDelegation.to(LogCallInterceptor.class));
+                })
+                .with(AgentBuilder.Listener.StreamWriting.toSystemOut()) // Keep debug listeners
+                .installOnByteBuddyAgent(); // *** This is the key change! ***
+        // Installs on the agent installed by ByteBuddyAgent.install()
+        System.out.println("### ByteBuddyAgent: Agent installed successfully! ###");
+    }
+*/
+
 
     @BeforeEach
     void setUp() {
@@ -175,7 +211,7 @@ public class TestLogCallAspect {
     void testSimpleLog_logsParametersAndReturn() {
         // Arrange
         TestService service = new TestService();
-
+        // TestService service = LogCallFactory.create(TestService.class);
         // Act
         service.simpleLog("Test", 123);
 
@@ -191,6 +227,7 @@ public class TestLogCallAspect {
     void testExceptionLog_logsExceptionStackTrace() {
         // Arrange
         TestService service = new TestService();
+        // TestService service = LogCallFactory.create(TestService.class);
 
         // Act & Assert
         assertThrows(IllegalStateException.class, () -> service.exceptionLog("fail"));
@@ -203,13 +240,14 @@ public class TestLogCallAspect {
         assertTrue(logMessage.contains("Exception Stack Trace:"), "Log message should contain 'Exception Stack Trace:'");
         assertTrue(logMessage.contains("java.lang.IllegalStateException: Test Exception"), "Log message should contain exception details");
         // Verifica che lo stacktrace non contenga l'aspect stesso
-        assertFalse(logMessage.contains("net.gnius.logcall.LogCallAspect"), "Log message should not contain AspectJ internal classes");
+        assertFalse(logMessage.contains("com.github.pourquoipas.logcall.LogCallAspect"), "Log message should not contain AspectJ internal classes");
     }
 
     @Test
     void testStackTraceLog_logsCallStack() {
         // Arrange
         TestService service = new TestService();
+        // TestService service = LogCallFactory.create(TestService.class);
 
         // Act
         service.stackTraceLog();
@@ -221,14 +259,15 @@ public class TestLogCallAspect {
 
         assertTrue(logMessage.contains("Method 'stackTraceLog'"), "Log message should contain method name");
         assertTrue(logMessage.contains("Call Stack Trace:"), "Log message should contain 'Call Stack Trace:'");
-        assertTrue(logMessage.contains("at net.gnius.logcall.TestLogCallAspect.testStackTraceLog"), "Log message should contain calling test method");
-        assertFalse(logMessage.contains("net.gnius.logcall.LogCallAspect"), "Log message should not contain AspectJ internal classes");
+        assertTrue(logMessage.contains("at com.github.pourquoipas.logcall.TestLogCall.testStackTraceLog"), "Log message should contain calling test method");
+        assertFalse(logMessage.contains("com.github.pourquoipas.logcall.LogCallAspect"), "Log message should not contain AspectJ internal classes");
     }
 
     @Test
     void testCustomLog_formatsMessageCorrectly() {
         // Arrange
         TestService service = new TestService();
+        // TestService service = LogCallFactory.create(TestService.class);
 
         // Act
         service.customLog("ParameterValue");
@@ -236,7 +275,6 @@ public class TestLogCallAspect {
         // Assert
         assertEquals(1, listAppender.getMessages().size(), "Expected 1 log message for customLog");
         String logMessage = listAppender.getMessages().get(0);
-
-        assertTrue(logMessage.contains("Custom log for customLog with param ParameterValue and return CustomReturn"), "Custom log message should be correctly formatted");
+        assertTrue(logMessage.contains("Custom log for customLog with param ParameterValue and return CustomReturn"), "Custom log message should be correctly formatted: " + logMessage) ;
     }
 }

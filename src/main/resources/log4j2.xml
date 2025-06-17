@@ -24,7 +24,7 @@
         <!-- Logger specifico per la classe BusinessService. -->
         <!-- Invia i log a livello TRACE o superiore al file 'business-service.log' -->
         <!-- additivity="false" impedisce che i log vengano inviati anche al Root logger -->
-        <Logger name="net.gnius.examples.LogCallExample" level="trace" additivity="false">
+        <Logger name="com.github.pourquoipas.examples.LogCallExample" level="trace" additivity="false">
 <!--            <AppenderRef ref="LogCallExample"/>-->
             <AppenderRef ref="Console"/> <!-- Puoi inviare a più appender -->
         </Logger>
